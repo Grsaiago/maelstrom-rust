@@ -1,25 +1,28 @@
 mod message_types;
-mod runtime;
+mod node;
+mod workloads;
 
 use message_types::*;
-use runtime::Node;
+use node::Node;
 use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let mut node = Node::new();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let mut node: Node = Node::new();
     let incoming_message = Message {
         src: "eu".to_string(),
         dst: "Voce".to_string(),
-        body: MessageBody {
+        body: MessageBody::<EchoRPC> {
             r#type: "uma coisa".to_string(),
             msg_id: None,
             in_reply_to: None,
-            payload: Payload::Generate(GeneratePayload { msg_id: 10 }),
+            payload: EchoRPC {
+                echo: "oie".to_string(),
+            },
         },
     };
 
-    node.handle::<EchoPayload>(|message| println!("{:?}", message));
-    node.handle::<GeneratePayload>(|_message| println!("Voce recebeu um generate"));
+    node.handle::<EchoRPC>(|message| println!("{:?}", message));
 
     node.call(incoming_message);
     Ok(())

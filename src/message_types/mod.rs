@@ -1,72 +1,37 @@
-use std::any::TypeId;
+use std::{any::TypeId, collections::HashMap, fmt::Debug};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Message {
+#[derive(Clone, Debug, Deserialize)]
+pub struct Message<T>
+where
+    T: Debug + Clone, // the T has to impl Deserialize too
+{
     pub src: String,
     #[serde(rename = "dest")]
     pub dst: String,
-    pub body: MessageBody,
+    pub body: MessageBody<T>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageBody {
+#[derive(Clone, Debug, Deserialize)]
+pub struct MessageBody<T>
+where
+    T: Debug + Clone, // the T has to impl Deserialize too
+{
     pub r#type: String,
     pub msg_id: Option<usize>,
     pub in_reply_to: Option<usize>,
     #[serde(flatten)]
-    pub payload: Payload,
+    pub payload: T,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum Payload {
-    Echo(EchoPayload),
-    Generate(GeneratePayload),
+pub enum EchoWorkload {
+    Echo(HashMap<String, String>),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EchoPayload {
+#[derive(Debug, Clone, Deserialize)]
+pub struct EchoRPC {
     pub echo: String,
-}
-
-// we have to implement MessageType for all invariants to be able to pass any
-// message into the 'handle' method of the Node struct
-impl MessageType for EchoPayload {
-    fn as_type_id(&self) -> std::any::TypeId {
-        TypeId::of::<EchoPayload>()
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct GeneratePayload {
-    pub msg_id: u32,
-}
-
-// we have to implement MessageType for all invariants to be able to pass any
-// message into the 'handle' method of the Node struct
-impl MessageType for GeneratePayload {
-    fn as_type_id(&self) -> std::any::TypeId {
-        TypeId::of::<GeneratePayload>()
-    }
-}
-
-// When type_id() is called on an enum, it always returns the same value,
-// regardless of the enum's current invariant.
-// We need this trait in order to extract the type_id for each enum invariant at runtime
-pub trait MessageType {
-    fn as_type_id(&self) -> std::any::TypeId;
-}
-
-impl MessageType for Payload {
-    // When type_id() is called on an enum, it always returns the same value,
-    // regardless of the enum's current invariant.
-    // We need this trait in order to extract the type_id for each enum invariant at runtime
-    fn as_type_id(&self) -> std::any::TypeId {
-        match *self {
-            Self::Echo(_) => TypeId::of::<EchoPayload>(),
-            Self::Generate(_) => TypeId::of::<GeneratePayload>(),
-        }
-    }
 }
