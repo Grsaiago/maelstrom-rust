@@ -74,4 +74,18 @@ impl MaelstromError {
             code,
         }
     }
+
+    /// TODO: Modificar para receber como primeiro parâmetro uma request
+    pub fn new_with_error_message(
+        in_reply_to: i32,
+        code: MaelstromErrorCode,
+        text: String,
+    ) -> Self {
+        MaelstromError {
+            r#type: "error".to_string(),
+            text,
+            in_reply_to,
+            code,
+        }
+    }
 }
