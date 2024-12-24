@@ -1,3 +1,5 @@
+/// At the start of a test, Maelstrom issues a single init message to each node.
+pub mod init;
 // A broadcast system.
 // Essentially a test of eventually-consistent set addition, but also provides an initial topology message to the cluster with a set of neighbors for each node to use.
 pub mod broadcast;
