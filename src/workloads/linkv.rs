@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// A workload for a linearizable key-value store.
 ///
 /// Reads the current value of a single key.
 /// Clients send a read request with the key they'd like to observe, and expect a response with the current value of that key.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReadRequest {
     /// This will always have the value "read"
     r#type: String,
@@ -11,6 +13,7 @@ pub struct ReadRequest {
     msg_id: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReadResponse {
     /// This will always have the value "read_ok"
     r#type: String,
@@ -23,6 +26,7 @@ pub struct ReadResponse {
 /// Blindly overwrites the value of a key.
 /// Creates keys if they do not presently exist.
 /// Servers should respond with a write_ok response once the write is complete.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WriteRequest {
     /// This will always have the value "write"
     r#type: String,
@@ -30,6 +34,7 @@ pub struct WriteRequest {
     msg_id: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WriteResponse {
     /// This will always have the value "write_ok"
     r#type: String,
