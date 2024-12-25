@@ -1,9 +1,10 @@
-mod message_types;
-mod node;
+mod message;
+mod runtime;
 mod workloads;
 
-use message_types::*;
-use node::Node;
+use message::{Message, MessageBody};
+use runtime::Node;
+use serde_json::json;
 use std::error::Error;
 
 #[tokio::main]
@@ -11,18 +12,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut node: Node = Node::new();
     let incoming_message = Message {
         src: "eu".to_string(),
-        dst: "Voce".to_string(),
-        body: MessageBody::<EchoRPC> {
-            r#type: "uma coisa".to_string(),
+        dest: "Voce".to_string(),
+        body: MessageBody {
+            r#type: "echo".to_string(),
             msg_id: None,
             in_reply_to: None,
-            payload: EchoRPC {
-                echo: "oie".to_string(),
-            },
+            payload: json!({
+                "echo": "oieoie"
+            }),
         },
     };
 
-    node.handle::<EchoRPC>(|message| println!("{:?}", message));
+    node.handle("echo", |message| println!("{:?}", message));
 
     node.call(incoming_message);
     Ok(())
