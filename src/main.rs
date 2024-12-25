@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         src: "eu".to_string(),
         dest: "Voce".to_string(),
         body: MessageBody {
-            r#type: "echo".to_string(),
+            ty: "echo".to_string(),
             msg_id: None,
             in_reply_to: None,
             payload: json!({

@@ -50,7 +50,7 @@ impl Node {
                 println!("call com o map interno sendo vazio");
             }
             Some(map) => {
-                if let Some(func) = map.get(&message.body.r#type) {
+                if let Some(func) = map.get(&message.body.ty) {
                     func(message)
                 }
             }

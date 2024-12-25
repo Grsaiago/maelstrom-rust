@@ -11,7 +11,8 @@ pub struct Message {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct MessageBody {
-    pub r#type: String,
+    #[serde(rename = "type")]
+    pub ty: String,
     pub msg_id: Option<isize>,
     pub in_reply_to: Option<isize>,
     #[serde(flatten)]
