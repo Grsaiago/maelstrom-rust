@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MaelstromErrorCode {
@@ -57,11 +57,13 @@ impl Display for MaelstromErrorCode {
     }
 }
 
+impl Error for MaelstromErrorCode {}
+
 pub struct MaelstromError {
-    r#type: String,
-    in_reply_to: i32,
-    code: MaelstromErrorCode,
-    text: String,
+    pub r#type: String,
+    pub in_reply_to: i32,
+    pub code: MaelstromErrorCode,
+    pub text: String,
 }
 
 impl MaelstromError {

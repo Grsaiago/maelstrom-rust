@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         },
     };
 
-    node.handle("echo", |message| println!("{:?}", message));
+    node.handle("topology", |message| println!("{:?}", message));
 
     node.call(incoming_message);
     Ok(())

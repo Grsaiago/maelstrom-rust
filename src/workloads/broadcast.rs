@@ -9,18 +9,18 @@ use std::collections::HashMap;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TopologyRequest {
     /// This will always have the value "topology"
-    r#type: String,
-    topology: HashMap<String, Vec<String>>,
-    msg_id: i32,
+    pub r#type: String,
+    pub topology: HashMap<String, Vec<String>>,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TopologyResponse {
     /// This will always have the value "topology_ok"
-    r#type: String,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }
 
 /// Sends a single message into the broadcast system, and requests that it be broadcast to everyone.
@@ -28,34 +28,34 @@ pub struct TopologyResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BroadcastRequest {
     /// This will always have the value "broadcast"
-    r#type: String,
-    message: Value,
-    msg_id: i32,
+    pub r#type: String,
+    pub message: Value,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BroadcastResponse {
     /// This will always have the value "broadcast_ok"
-    r#type: String,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }
 
 /// Requests all messages present on a node.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReadRequest {
     /// This will always have the value "read"
-    r#type: String,
-    msg_id: i32,
+    pub r#type: String,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReadResponse {
     /// This will always have the value "read_ok"
-    r#type: String,
-    messages: Vec<Value>,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub messages: Vec<Value>,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }

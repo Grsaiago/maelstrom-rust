@@ -7,17 +7,17 @@ use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EchoRequest {
     /// This will always have the value "echo"
-    r#type: String,
-    echo: Value,
-    msg_id: i32,
+    pub r#type: String,
+    pub echo: Value,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EchoResponse {
     /// This will always have the value "echo_ok"
-    r#type: String,
-    in_reply_to: i32,
-    echo: Value,
-    k: Option<i32>,
-    msg_id: Option<i32>,
+    pub r#type: String,
+    pub in_reply_to: i32,
+    pub echo: Value,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
 }

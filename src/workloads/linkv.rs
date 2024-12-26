@@ -8,19 +8,19 @@ use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReadRequest {
     /// This will always have the value "read"
-    r#type: String,
-    key: Value,
-    msg_id: i32,
+    pub r#type: String,
+    pub key: Value,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReadResponse {
     /// This will always have the value "read_ok"
-    r#type: String,
-    value: Value,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub value: Value,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }
 
 /// Blindly overwrites the value of a key.
@@ -29,35 +29,35 @@ pub struct ReadResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WriteRequest {
     /// This will always have the value "write"
-    r#type: String,
-    key: Value,
-    msg_id: i32,
+    pub r#type: String,
+    pub key: Value,
+    pub msg_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WriteResponse {
     /// This will always have the value "write_ok"
-    r#type: String,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }
 
 /// Atomically compare-and-sets a single key: if the value of key is currently from, sets it to to.
 /// Returns error 20 if the key doesn't exist, and 22 if the from value doesn't match.
 pub struct CasRequest {
     /// This will always have the value "cas"
-    r#type: String,
-    key: Value,
-    from: Value,
-    to: Value,
-    msg_id: i32,
+    pub r#type: String,
+    pub key: Value,
+    pub from: Value,
+    pub to: Value,
+    pub msg_id: i32,
 }
 
 pub struct CasResponse {
     /// This will always have the value "cas_ok"
-    r#type: String,
-    k: Option<i32>,
-    msg_id: Option<i32>,
-    in_reply_to: i32,
+    pub r#type: String,
+    pub k: Option<i32>,
+    pub msg_id: Option<i32>,
+    pub in_reply_to: i32,
 }
