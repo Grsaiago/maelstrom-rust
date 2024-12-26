@@ -1,14 +1,16 @@
+use tokio::io::{self, AsyncBufReadExt};
+use tokio::{
+    io::BufReader,
+    sync::mpsc::{self, Receiver, Sender},
+};
+
 use crate::runtime::message_router::MessageRouter;
 use crate::Message;
 use std::sync::atomic::AtomicI32;
-use tokio::io::{Stdin, Stdout};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
 pub struct Node {
-    pub stdin: Stdin,
-    pub stdout: Stdout,
-
     /// Your node's id. this will be initialized whenever your Node gets an Init message
     pub id: Option<String>,
 
@@ -25,8 +27,6 @@ pub struct Node {
 impl Node {
     pub fn new() -> Self {
         Node {
-            stdin: tokio::io::stdin(),
-            stdout: tokio::io::stdout(),
             id: None,
             node_ids: None,
             next_message_id: AtomicI32::new(0),
@@ -39,9 +39,25 @@ impl Node {
         self.message_router.route(rpc_type, handler);
     }
 
-    //async fn serve(&self) {
-    //    self.
-    //}
+    pub async fn serve(receiver: Receiver<Message>) {
+        let stdout = std::io::stdout().lock();
+    }
+
+    pub async fn run(&self) {
+        let (message_sender, message_receiver) = mpsc::channel::<Message>(50);
+        tokio::join!(Self::listen(message_sender), Self::serve(message_receiver));
+    }
+
+    pub async fn listen(sender: Sender<Message>) {
+        let mut lines_iterator = BufReader::new(io::stdin()).lines();
+        while let Some(line) = lines_iterator.next_line().await.unwrap() {
+            let message: Message = match serde_json::from_str(&line) {
+                Ok(val) => val,
+                Err(err) => panic!(), //TODO: RETORNO MELHOR DE ERRO
+            };
+            sender.send(message);
+        }
+    }
 
     // WARN:essa é interna, está como pub só pra teste
     pub fn call(&mut self, message: Message) {
