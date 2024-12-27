@@ -10,22 +10,21 @@ use std::error::Error;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut node: Node = Node::new();
-    let incoming_message = Message {
-        src: "eu".to_string(),
-        dest: "Voce".to_string(),
-        body: MessageBody {
-            ty: "echo".to_string(),
-            msg_id: None,
-            in_reply_to: None,
-            payload: json!({
-                "echo": "oieoie"
-            }),
-        },
-    };
+    //let incoming_message = Message {
+    //    src: "eu".to_string(),
+    //    dest: "Voce".to_string(),
+    //    body: MessageBody {
+    //        ty: "echo".to_string(),
+    //        msg_id: None,
+    //        in_reply_to: None,
+    //        payload: json!({
+    //            "echo": "oieoie"
+    //        }),
+    //    },
+    //};
 
     node.handle("echo", |message| println!("{:?}", message));
 
-    node.call(incoming_message);
     node.run().await;
     Ok(())
 }

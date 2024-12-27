@@ -39,23 +39,30 @@ impl Node {
         self.message_router.route(rpc_type, handler);
     }
 
-    pub async fn serve(receiver: Receiver<Message>) {
-        let stdout = std::io::stdout().lock();
+    pub async fn serve(&self, mut receiver: Receiver<Message>) {
+        while let Some(message) = receiver.recv().await {
+            let _stdout = std::io::stdout().lock();
+            if let Some(router) = &self.message_router.router {
+                if let Some(handler) = router.get(&message.body.ty) {
+                    handler(message);
+                }
+            }
+        }
     }
 
     pub async fn run(&self) {
         let (message_sender, message_receiver) = mpsc::channel::<Message>(50);
-        tokio::join!(Self::listen(message_sender), Self::serve(message_receiver));
+        tokio::join!(self.listen(message_sender), self.serve(message_receiver));
     }
 
-    pub async fn listen(sender: Sender<Message>) {
+    pub async fn listen(&self, sender: Sender<Message>) {
         let mut lines_iterator = BufReader::new(io::stdin()).lines();
         while let Some(line) = lines_iterator.next_line().await.unwrap() {
             let message: Message = match serde_json::from_str(&line) {
                 Ok(val) => val,
-                Err(err) => panic!(), //TODO: RETORNO MELHOR DE ERRO
+                Err(_err) => panic!(), //TODO: RETORNO MELHOR DE ERRO
             };
-            sender.send(message);
+            let _ = sender.send(message).await;
         }
     }
 
