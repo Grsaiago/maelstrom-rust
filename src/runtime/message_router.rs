@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use crate::Message;
 
-pub type TypeFuncMap = HashMap<String, Box<dyn Fn(Message)>>;
+use super::Node;
+
+pub type TypeFuncMap = HashMap<String, Box<dyn Fn(Message, &Node)>>;
 
 pub struct MessageRouter {
     pub router: Option<Box<TypeFuncMap>>,
@@ -13,7 +15,7 @@ impl MessageRouter {
         MessageRouter { router: None }
     }
 
-    pub fn route(&mut self, rpc_type: &str, handler: impl Fn(Message) + 'static) {
+    pub fn route(&mut self, rpc_type: &str, handler: impl Fn(Message, &Node) + 'static) {
         // box na função castando o input pra any
         let boxed_handler = Box::new(handler);
         // Insert the boxed handler into the router map

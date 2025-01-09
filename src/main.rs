@@ -2,9 +2,8 @@ mod message;
 mod runtime;
 mod workloads;
 
-use message::{Message, MessageBody};
+use message::Message;
 use runtime::Node;
-use serde_json::json;
 use std::error::Error;
 
 #[tokio::main]
@@ -23,7 +22,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //    },
     //};
 
-    node.handle("echo", |message| println!("{:?}", message));
+    node.handle("echo", |message, node| println!("{:?}", message));
+    node.handle("Oie", |message, node| println!("{:?}", message));
 
     node.run().await;
     Ok(())
