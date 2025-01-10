@@ -23,7 +23,7 @@ Define the types for the following workloads:
 
 TODOS:
 
-- [ ] Implement a way to Extract the workloads to the message just like the
+- [x] Implement a way to Extract the workloads to the message just like the
 [Go lib does](https://pkg.go.dev/github.com/jepsen-io/maelstrom/demo/go#Message).
 - [ ] Implement an Error type that implement the std::Error trait.
 - [x] Implement the Error codes enum.
@@ -31,6 +31,6 @@ TODOS:
 and [this maelstrom link](https://github.com/jepsen-io/maelstrom/blob/main/doc/protocol.md#messages)
 to understand a bit better how to implement the runtime.
 Remember that you're trying to use the typesystem.
-- [ ] Come up with a Message type, with src, dst and a body as a serde::Value.
-- [ ] ? Maybe implement a RpcMessage empty trait that is auto implemented for
-Serializable types to act as a 'glue' for the typesystem.
+- [x] Come up with a Message type, with src, dst and a body as a serde::Value.
+- [x] Make Node sync/send and implement interior mutability so it can be passed
+as a parameter to the handler functions
