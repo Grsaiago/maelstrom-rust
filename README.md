@@ -34,4 +34,6 @@ Remember that you're trying to use the typesystem.
 - [x] Come up with a Message type, with src, dst and a body as a serde::Value.
 - [x] Make Node sync/send and implement interior mutability so it can be passed
 as a parameter to the handler functions
-- [ ] A way of answering based on a message (see go's node.Reply())
+- [x] A way of answering based on a message (see go's node.Reply()). Test pending
+- [ ] Make the MessageRouter Type be sync to I can use tokio::join! on two
+tokio::spawn handles instead of tokio::join! on both methods in Node.run().

@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InitRequest {
     /// This will always have the value "init"
-    pub r#type: String,
-    pub msg_id: i32,
     pub node_id: String,
     pub node_ids: Vec<String>,
 }

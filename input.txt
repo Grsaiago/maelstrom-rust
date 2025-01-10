@@ -1,0 +1,8 @@
+{"src":"c0","dest":"Voce","body":{"type":"init","msg_id":1,"node_id": "n1","node_ids":["n1", "n2", "n3"]}}
+{"src":"n3","dest":"n1","body":{"type":"echo","msg_id":2,"in_reply_to":null,"echo":"oieoie1"}}
+{"src":"n1","dest":"n1","body":{"type":"echo","msg_id":3,"in_reply_to":null,"echo":"oieoie2"}}
+{"src":"n3","dest":"n1","body":{"type":"echo","msg_id":4,"in_reply_to":null,"echo":"oieoie3"}}
+{"src":"n2","dest":"n1","body":{"type":"echo","msg_id":5,"in_reply_to":null,"echo":"oieoie4"}}
+{"src":"n3","dest":"n1","body":{"type":"echo","msg_id":6,"in_reply_to":null,"echo":"oieoie5"}}
+{"src":"n1","dest":"n1","body":{"type":"echo","msg_id":7,"in_reply_to":null,"echo":"oieoie6"}}
+{"src":"n2","dest":"n1","body":{"type":"echo","msg_id":8,"in_reply_to":null,"echo":"oieoie7"}}

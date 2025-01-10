@@ -4,6 +4,7 @@ mod workloads;
 
 use message::Message;
 use runtime::Node;
+use serde_json::json;
 use std::error::Error;
 
 #[tokio::main]
@@ -23,14 +24,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //};
 
     node.handle("echo", |message, node| {
-        println!(
-            "A mensagem recebida foi: {}",
-            serde_json::to_string_pretty(&message).expect("Error desserializing it")
-        );
-        println!(
-            "id do nó: [{:?}]\nnodeIds do nó: {:?}",
-            node.get_id(),
-            node.get_ids()
+        let body = message.body.payload.clone();
+        node.reply(
+            message,
+            json!({
+                "echo": body
+            }),
         );
     });
 
