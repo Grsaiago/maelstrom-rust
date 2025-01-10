@@ -47,14 +47,14 @@ impl Node {
         *lock = new_id;
     }
 
-    pub fn get_node_ids(&self) -> Option<Vec<String>> {
+    pub fn get_ids(&self) -> Option<Vec<String>> {
         self.node_ids
             .read()
             .expect("Error on get_node_ids read lock")
             .clone()
     }
 
-    pub fn set_node_ids(&self, new_ids: Option<Vec<String>>) {
+    pub fn set_ids(&self, new_ids: Option<Vec<String>>) {
         let mut lock = self
             .node_ids
             .write()
@@ -68,10 +68,12 @@ impl Node {
     }
 
     fn init_handler(message: Message, node: &Node) {
-        match serde_json::from_value::<InitRequest>(message.body.payload) {
+        let body = match serde_json::from_value::<InitRequest>(message.body.payload) {
             Ok(body) => body,
             Err(err) => panic!("{err:?}"),
         };
+        node.set_id(Some(body.node_id));
+        node.set_ids(Some(body.node_ids));
     }
 
     pub async fn serve(&self, mut receiver: Receiver<Message>) {
