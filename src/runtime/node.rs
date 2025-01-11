@@ -9,11 +9,9 @@ use crate::message::MessageBody;
 use crate::runtime::message_router::MessageRouter;
 use crate::workloads::init::InitRequest;
 use crate::Message;
-use core::panic;
 use std::io::Write;
 use std::sync::atomic::AtomicIsize;
 use std::sync::RwLock;
-use std::thread;
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -85,11 +83,15 @@ impl Node {
     }
 
     // You'd call it as node.handle::<EchoPayload>(handler);
-    pub fn handle(&mut self, rpc_type: &str, handler: impl Fn(Message, &Node) + 'static) {
+    pub fn handle(
+        &mut self,
+        rpc_type: &str,
+        handler: impl Fn(Message, &Node) + Send + Sync + 'static,
+    ) {
         self.message_router.route(rpc_type, handler);
     }
 
-    pub async fn listen(&self, sender: Sender<Message>) {
+    pub async fn listen(sender: Sender<Message>) {
         let mut lines_iterator = BufReader::new(io::stdin()).lines();
         while let Some(line) = lines_iterator.next_line().await.unwrap() {
             let message: Message = match serde_json::from_str(&line) {
@@ -105,36 +107,25 @@ impl Node {
         }
     }
 
-    pub async fn serve(&self, mut receiver: Receiver<Message>) {
+    pub async fn serve(node: Node, mut receiver: Receiver<Message>) {
         while let Some(message) = receiver.recv().await {
-            if let Some(router) = &self.message_router.router {
-                if let Some(handler) = router.get(&message.body.ty) {
-                    handler(message, self);
-                }
+            if let Some(handler) = node.message_router.get(&message.body.ty) {
+                handler(message, &node);
             }
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(mut self) {
         let (message_sender, message_receiver) = mpsc::channel::<Message>(50);
         self.message_sender = Some(message_sender.clone());
-        // TODO: Like this
-        //let listen_handle = thread::spawn(|| async { self.listen(message_sender) });
-        tokio::join!(self.listen(message_sender), self.serve(message_receiver));
-    }
 
-    // WARN:essa é interna, está como pub só pra teste
-    pub fn call(&mut self, message: Message) {
-        match &self.message_router.router {
-            None => {
-                println!("call com o map interno sendo vazio");
-            }
-            Some(map) => {
-                if let Some(func) = map.get(&message.body.ty) {
-                    func(message, self)
-                }
-            }
-        }
+        let listen_handle = tokio::task::spawn(async move {
+            Node::listen(message_sender.clone()).await;
+        });
+        let serve_handle = tokio::task::spawn(async move {
+            Node::serve(self, message_receiver).await;
+        });
+        let _ = tokio::join!(listen_handle, serve_handle);
     }
 
     pub fn reply(&self, message: Message, reply: Value) {
