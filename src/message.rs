@@ -15,6 +15,7 @@ pub struct MessageBody {
     pub ty: String,
     pub msg_id: Option<isize>,
     pub in_reply_to: Option<isize>,
+
     #[serde(flatten)]
     pub payload: Value,
 }

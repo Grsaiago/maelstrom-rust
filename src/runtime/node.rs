@@ -1,4 +1,5 @@
-use serde_json::Value;
+use serde::Serialize;
+use serde_json::json;
 use tokio::io::{self, AsyncBufReadExt};
 use tokio::{
     io::BufReader,
@@ -35,7 +36,7 @@ impl Node {
         let mut node = Node {
             id: RwLock::new(None),
             node_ids: RwLock::new(None),
-            next_message_id: AtomicIsize::new(0),
+            next_message_id: AtomicIsize::new(1),
             message_router: MessageRouter::new(),
             message_sender: None,
         };
@@ -68,7 +69,7 @@ impl Node {
     }
 
     fn init_handler(message: Message, node: &Node) {
-        let body = match serde_json::from_value::<InitRequest>(message.body.payload) {
+        let body = match serde_json::from_value::<InitRequest>(message.body.payload.clone()) {
             Ok(body) => body,
             Err(err) => panic!("{err:?}"),
         };
@@ -80,6 +81,7 @@ impl Node {
             node.get_id(),
             node.get_ids()
         );
+        node.reply(message, json!({}));
     }
 
     // You'd call it as node.handle::<EchoPayload>(handler);
@@ -128,7 +130,7 @@ impl Node {
         let _ = tokio::join!(listen_handle, serve_handle);
     }
 
-    pub fn reply(&self, message: Message, reply: Value) {
+    pub fn reply(&self, message: Message, reply: impl Serialize) {
         let Some(src) = self.get_id() else {
             panic!("self.id value not yet initialized in call to reply")
         };
@@ -143,7 +145,8 @@ impl Node {
                         .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
                 ),
                 in_reply_to: message.body.msg_id,
-                payload: reply,
+                payload: serde_json::to_value(reply)
+                    .expect("error converting reply into payload in Node::reply"),
             },
         };
 
