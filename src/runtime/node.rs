@@ -12,7 +12,7 @@ use crate::workloads::init::InitRequest;
 use crate::Message;
 use std::io::Write;
 use std::sync::atomic::AtomicIsize;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -110,9 +110,13 @@ impl Node {
     }
 
     pub async fn serve(node: Node, mut receiver: Receiver<Message>) {
+        let node = Arc::new(node);
         while let Some(message) = receiver.recv().await {
-            if let Some(handler) = node.message_router.get(&message.body.ty) {
-                handler(message, &node);
+            let shared_node = node.clone();
+            if let Some(handler) = shared_node.clone().message_router.get(&message.body.ty) {
+                tokio::spawn(async move {
+                    handler(message, &shared_node);
+                });
             }
         }
     }
