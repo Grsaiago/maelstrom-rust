@@ -1,18 +1,18 @@
-use serde::Serialize;
-use serde_json::json;
-use tokio::io::{self, AsyncBufReadExt};
-use tokio::{
-    io::BufReader,
-    sync::mpsc::{self, Receiver, Sender},
-};
-
 use crate::message::MessageBody;
 use crate::runtime::message_router::MessageRouter;
 use crate::workloads::init::InitRequest;
 use crate::Message;
-use std::io::Write;
-use std::sync::atomic::AtomicIsize;
-use std::sync::{Arc, RwLock};
+use serde::Serialize;
+use serde_json::json;
+use std::{
+    io::Write,
+    sync::atomic::AtomicIsize,
+    sync::{Arc, RwLock},
+};
+use tokio::{
+    io::{self, AsyncBufReadExt, BufReader},
+    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
+};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -28,7 +28,7 @@ pub struct Node {
 
     pub message_router: MessageRouter,
 
-    pub message_sender: Option<Sender<Message>>, // pub callbacks: todo!(),
+    pub message_sender: Option<UnboundedSender<Message>>, // pub callbacks: todo!(),
 }
 
 impl Node {
@@ -93,7 +93,7 @@ impl Node {
         self.message_router.route(rpc_type, handler);
     }
 
-    pub async fn listen(sender: Sender<Message>) {
+    pub async fn listen(sender: UnboundedSender<Message>) {
         let mut lines_iterator = BufReader::new(io::stdin()).lines();
         while let Some(line) = lines_iterator.next_line().await.unwrap() {
             let message: Message = match serde_json::from_str(&line) {
@@ -105,11 +105,11 @@ impl Node {
                 "A mensagem recebida foi: {}",
                 serde_json::to_string_pretty(&message).expect("Error desserializing it")
             );
-            let _ = sender.send(message).await;
+            let _ = sender.send(message);
         }
     }
 
-    pub async fn serve(node: Node, mut receiver: Receiver<Message>) {
+    pub async fn serve(node: Node, mut receiver: UnboundedReceiver<Message>) {
         let node = Arc::new(node);
         while let Some(message) = receiver.recv().await {
             let shared_node = node.clone();
@@ -122,7 +122,7 @@ impl Node {
     }
 
     pub async fn run(mut self) {
-        let (message_sender, message_receiver) = mpsc::channel::<Message>(50);
+        let (message_sender, message_receiver) = mpsc::unbounded_channel::<Message>();
         self.message_sender = Some(message_sender.clone());
 
         let listen_handle = tokio::task::spawn(async move {
