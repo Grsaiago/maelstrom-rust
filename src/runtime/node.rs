@@ -85,11 +85,10 @@ impl Node {
     }
 
     // You'd call it as node.handle::<EchoPayload>(handler);
-    pub fn handle(
-        &mut self,
-        rpc_type: &str,
-        handler: impl Fn(Message, &Node) + Send + Sync + 'static,
-    ) {
+    pub fn handle<F>(&mut self, rpc_type: &str, handler: F)
+    where
+        F: Fn(Message, &Node) + Send + Sync + 'static,
+    {
         self.message_router.route(rpc_type, handler);
     }
 
@@ -134,7 +133,10 @@ impl Node {
         let _ = tokio::join!(listen_handle, serve_handle);
     }
 
-    pub fn reply(&self, message: Message, reply: impl Serialize) {
+    pub fn reply<S>(&self, message: Message, reply: S)
+    where
+        S: Serialize,
+    {
         let Some(src) = self.get_id() else {
             panic!("self.id value not yet initialized in call to reply")
         };

@@ -1,13 +1,13 @@
+use super::Node;
+use crate::Message;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
 
-use crate::Message;
+type HandlerFunc = dyn Fn(Message, &Node) + Send + Sync + 'static;
 
-use super::Node;
-
-pub type TypeFuncMap = HashMap<String, Arc<dyn Fn(Message, &Node) + Send + Sync>>;
+pub type TypeFuncMap = HashMap<String, Arc<HandlerFunc>>;
 
 pub struct MessageRouter {
     pub router: Arc<RwLock<Option<TypeFuncMap>>>,
@@ -20,14 +20,12 @@ impl MessageRouter {
         }
     }
 
-    pub fn route(
-        &mut self,
-        rpc_type: &str,
-        handler: impl Fn(Message, &Node) + Send + Sync + 'static,
-    ) {
-        // box na função castando o input pra any
-        let arced_handler = Arc::new(handler);
+    pub fn route<F>(&mut self, rpc_type: &str, handler: F)
+    where
+        F: Fn(Message, &Node) + Send + Sync + 'static,
+    {
         // Insert the boxed handler into the router map
+        let arced_handler: Arc<HandlerFunc> = Arc::new(handler);
         let _ = self
             .router
             .write()
@@ -36,7 +34,7 @@ impl MessageRouter {
             .insert(rpc_type.to_string(), arced_handler);
     }
 
-    pub fn get(&self, key: &str) -> Option<Arc<dyn Fn(Message, &Node) + Send + Sync>> {
+    pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc>> {
         if let Some(ref map) = *self
             .router
             .read()
