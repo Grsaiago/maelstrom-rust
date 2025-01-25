@@ -49,3 +49,57 @@ impl MessageRouter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use crate::{
+        message::{Message, MessageBody},
+        runtime::Node,
+    };
+
+    use super::MessageRouter;
+
+    #[test]
+    fn can_set_then_get() {
+        let mut router = MessageRouter::new();
+
+        router.route("test", |_, _| {});
+        assert!(router.get("test").is_some())
+    }
+
+    #[test]
+    fn can_set_then_call() {
+        let mut router = MessageRouter::new();
+        let msg: Message = Message {
+            src: "n1".to_string(),
+            dest: "n2".to_string(),
+            body: MessageBody {
+                ty: "test".to_string(),
+                msg_id: Some(1),
+                in_reply_to: None,
+                payload: json!({
+                    "name": "test_body",
+                }),
+            },
+        };
+        let (tx, rx) = std::sync::mpsc::channel::<Message>();
+        router.route("test", move |msg, _| {
+            let _ = tx.send(msg);
+        });
+
+        assert!(router.get(&msg.body.ty).is_some());
+        let callback = router.get(&msg.body.ty).unwrap();
+        callback(msg, &Node::new());
+        let received_message = rx.recv().expect("Error on receiving message");
+        assert_eq!(
+            received_message
+                .body
+                .payload
+                .get("name")
+                .expect("error on get json"),
+            "test_body"
+        )
+    }
+}
