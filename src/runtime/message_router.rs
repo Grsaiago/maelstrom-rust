@@ -102,4 +102,11 @@ mod tests {
             "test_body"
         )
     }
+
+    #[test]
+    fn cannot_get_unexisting_key() {
+        let router = MessageRouter::new();
+
+        assert!(router.get("aaaa").is_none())
+    }
 }
