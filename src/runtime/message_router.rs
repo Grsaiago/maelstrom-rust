@@ -5,12 +5,12 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-type HandlerFunc = dyn Fn(Message, &Node) + Send + Sync + 'static;
+type HandlerFunc = dyn Fn(Message, &Node) + Send + Sync;
 
-pub type TypeFuncMap = HashMap<String, Arc<HandlerFunc>>;
+pub type FuncMap = HashMap<String, Arc<HandlerFunc>>;
 
 pub struct MessageRouter {
-    pub router: Arc<RwLock<Option<TypeFuncMap>>>,
+    pub router: Arc<RwLock<Option<FuncMap>>>,
 }
 
 impl MessageRouter {
@@ -30,7 +30,7 @@ impl MessageRouter {
             .router
             .write()
             .expect("error on write lock of message router route()")
-            .get_or_insert_with(TypeFuncMap::default)
+            .get_or_insert_with(FuncMap::default)
             .insert(rpc_type.to_string(), arced_handler);
     }
 
