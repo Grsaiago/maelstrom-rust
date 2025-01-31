@@ -13,6 +13,7 @@ use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
+use tracing::{info, info_span, Instrument, Level};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -42,6 +43,18 @@ impl Node {
         };
         node.handle("init", Self::init_handler);
         node
+    }
+
+    pub fn with_log(self) -> Self {
+        tracing_subscriber::fmt()
+            .compact()
+            .with_max_level(Level::INFO)
+            .with_ansi(false)
+            .with_target(false)
+            .with_thread_ids(false)
+            .with_writer(std::io::stderr)
+            .init();
+        self
     }
 
     pub fn get_id(&self) -> Option<String> {
@@ -113,9 +126,17 @@ impl Node {
         while let Some(message) = receiver.recv().await {
             let shared_node = node.clone();
             if let Some(handler) = shared_node.clone().message_router.get(&message.body.ty) {
-                tokio::spawn(async move {
-                    handler(message, &shared_node);
-                });
+                let handler_span = info_span!("message_handler",
+                    node = %node.get_id().unwrap_or("nil".to_string()),
+                    msg.id = %message.body.msg_id.unwrap_or(0)
+                );
+                tokio::spawn(
+                    async move {
+                        info!(msg.type = message.body.ty, "calling handler");
+                        handler(message, &shared_node);
+                    }
+                    .instrument(handler_span),
+                );
             }
         }
     }
