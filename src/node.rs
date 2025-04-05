@@ -1,7 +1,7 @@
-use crate::Message;
 use crate::message::MessageBody;
 use crate::message_router::MessageRouter;
 use crate::workloads::init::InitRequest;
+use crate::Message;
 use serde::Serialize;
 use serde_json::json;
 use std::{
@@ -13,7 +13,7 @@ use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
-use tracing::{Instrument, Level, info, info_span};
+use tracing::{info, info_span, Instrument, Level};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -32,8 +32,8 @@ pub struct Node {
     pub message_sender: Option<UnboundedSender<Message>>, // pub callbacks: todo!(),
 }
 
-impl Node {
-    pub fn new() -> Node {
+impl Default for Node {
+    fn default() -> Self {
         let mut node = Node {
             id: RwLock::new(None),
             node_ids: RwLock::new(None),
@@ -43,6 +43,12 @@ impl Node {
         };
         node.handle("init", Node::init_handler);
         node
+    }
+}
+
+impl Node {
+    pub fn new() -> Node {
+        Node::default()
     }
 
     pub fn with_log(self) -> Node {

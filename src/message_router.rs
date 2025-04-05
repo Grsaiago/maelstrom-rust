@@ -13,11 +13,23 @@ pub struct MessageRouter {
     pub router: Arc<RwLock<Option<FuncMap>>>,
 }
 
-impl MessageRouter {
-    pub fn new() -> Self {
+impl Default for MessageRouter {
+    fn default() -> Self {
         MessageRouter {
             router: Arc::new(RwLock::new(None)),
         }
+    }
+}
+
+impl MessageRouter {
+    pub fn with_capacity(size: usize) -> MessageRouter {
+        MessageRouter {
+            router: Arc::new(RwLock::new(Some(FuncMap::with_capacity(size)))),
+        }
+    }
+
+    pub fn new() -> MessageRouter {
+        MessageRouter::default()
     }
 
     pub fn route<F>(&mut self, rpc_type: &str, handler: F)
