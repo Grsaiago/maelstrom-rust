@@ -1,7 +1,7 @@
-use crate::message::MessageBody;
-use crate::runtime::message_router::MessageRouter;
-use crate::workloads::init::InitRequest;
 use crate::Message;
+use crate::message::MessageBody;
+use crate::message_router::MessageRouter;
+use crate::workloads::init::InitRequest;
 use serde::Serialize;
 use serde_json::json;
 use std::{
@@ -13,7 +13,7 @@ use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
-use tracing::{info, info_span, Instrument, Level};
+use tracing::{Instrument, Level, info, info_span};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -33,7 +33,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new() -> Self {
+    pub fn new() -> Node {
         let mut node = Node {
             id: RwLock::new(None),
             node_ids: RwLock::new(None),
@@ -41,11 +41,11 @@ impl Node {
             message_router: MessageRouter::new(),
             message_sender: None,
         };
-        node.handle("init", Self::init_handler);
+        node.handle("init", Node::init_handler);
         node
     }
 
-    pub fn with_log(self) -> Self {
+    pub fn with_log(self) -> Node {
         tracing_subscriber::fmt()
             .compact()
             .with_max_level(Level::INFO)

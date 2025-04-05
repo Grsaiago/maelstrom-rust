@@ -1,9 +1,4 @@
-mod message;
-mod runtime;
-mod workloads;
-
-use message::Message;
-use runtime::Node;
+use maelstrom_rust::Node;
 use serde_json::json;
 use std::error::Error;
 use tracing::info;
@@ -20,7 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .expect("no echo key")
             .clone();
 
-        info!("Oie de dentro da função handler que eu, o user, escrevi");
+        info!("Hello from withing the function I wrote myself");
 
         node.reply(message, json!({"echo": body}));
     });

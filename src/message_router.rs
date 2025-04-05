@@ -56,7 +56,7 @@ mod tests {
 
     use crate::{
         message::{Message, MessageBody},
-        runtime::Node,
+        node::Node,
     };
 
     use super::MessageRouter;

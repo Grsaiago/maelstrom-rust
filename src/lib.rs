@@ -1,8 +1,11 @@
 /// Defines all things regarding Messages
-pub mod message_router;
+mod message;
+pub use message::{Message, MessageBody};
 
 /// Defines and exposes the Node type.
-pub mod node;
-
-/// re export of the Node type
+mod node;
 pub use node::Node;
+
+mod workloads;
+
+mod message_router;
