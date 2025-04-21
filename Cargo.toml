@@ -16,6 +16,7 @@ crate-type = ["lib"]
 [dependencies]
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.133"
+# tokio = { version = "1.42.0", features = ["rt-multi-thread", "io-std", "macros", "io-util", "sync"] }
 tokio = { version = "1.42.0", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
