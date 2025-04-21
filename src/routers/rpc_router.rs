@@ -1,35 +1,34 @@
-use super::Node;
+use crate::routers::common::HandlerFunc;
 use crate::Message;
+use crate::Node;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
 
-type HandlerFunc = dyn Fn(Message, &Node) + Send + Sync;
+type RpcMap = HashMap<String, Arc<HandlerFunc>>;
 
-pub type FuncMap = HashMap<String, Arc<HandlerFunc>>;
-
-pub struct MessageRouter {
-    pub router: Arc<RwLock<Option<FuncMap>>>,
+pub struct RpcRouter {
+    pub router: Arc<RwLock<Option<RpcMap>>>,
 }
 
-impl Default for MessageRouter {
+impl Default for RpcRouter {
     fn default() -> Self {
-        MessageRouter {
+        RpcRouter::new()
+    }
+}
+
+impl RpcRouter {
+    pub fn new() -> RpcRouter {
+        RpcRouter {
             router: Arc::new(RwLock::new(None)),
         }
     }
-}
 
-impl MessageRouter {
-    pub fn with_capacity(size: usize) -> MessageRouter {
-        MessageRouter {
-            router: Arc::new(RwLock::new(Some(FuncMap::with_capacity(size)))),
+    pub fn with_capacity(size: usize) -> RpcRouter {
+        RpcRouter {
+            router: Arc::new(RwLock::new(Some(RpcMap::with_capacity(size)))),
         }
-    }
-
-    pub fn new() -> MessageRouter {
-        MessageRouter::default()
     }
 
     pub fn route<F>(&mut self, rpc_type: &str, handler: F)
@@ -42,23 +41,12 @@ impl MessageRouter {
             .router
             .write()
             .expect("error on write lock of message router route()")
-            .get_or_insert_with(FuncMap::default)
+            .get_or_insert_with(RpcMap::default)
             .insert(rpc_type.to_string(), arced_handler);
     }
 
     pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc>> {
-        if let Some(ref map) = *self
-            .router
-            .read()
-            .expect("error on read lock in MessageRouter::get")
-        {
-            match map.get(key) {
-                Some(handler) => Some(handler.clone()),
-                None => None,
-            }
-        } else {
-            None
-        }
+        Some(self.router.read().ok()?.as_ref()?.get(key)?.clone())
     }
 }
 
@@ -71,11 +59,11 @@ mod tests {
         node::Node,
     };
 
-    use super::MessageRouter;
+    use super::RpcRouter;
 
     #[test]
     fn can_set_then_get() {
-        let mut router = MessageRouter::new();
+        let mut router = RpcRouter::new();
 
         router.route("test", |_, _| {});
         assert!(router.get("test").is_some())
@@ -83,7 +71,7 @@ mod tests {
 
     #[test]
     fn can_set_then_call() {
-        let mut router = MessageRouter::new();
+        let mut router = RpcRouter::new();
         let msg: Message = Message {
             src: "n1".to_string(),
             dest: "n2".to_string(),
@@ -117,7 +105,7 @@ mod tests {
 
     #[test]
     fn cannot_get_unexisting_key() {
-        let router = MessageRouter::new();
+        let router = RpcRouter::new();
 
         assert!(router.get("aaaa").is_none())
     }

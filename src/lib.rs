@@ -15,6 +15,5 @@ pub use message::{Message, MessageBody};
 mod node;
 pub use node::Node;
 
+mod routers;
 mod workloads;
-
-mod message_router;

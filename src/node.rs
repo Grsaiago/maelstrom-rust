@@ -1,8 +1,6 @@
-use crate::message::MessageBody;
-use crate::message_router::MessageRouter;
+use crate::routers::{CallbackRouter, RpcRouter};
 use crate::workloads::init::InitRequest;
-use crate::Message;
-use serde::Serialize;
+use crate::{Message, MessageBody};
 use serde_json::json;
 use std::{
     io::Write,
@@ -27,9 +25,11 @@ pub struct Node {
     /// Your internal message counter. This is your node's Lamport clock
     pub next_message_id: AtomicIsize,
 
-    pub message_router: MessageRouter,
+    pub message_sender: Option<UnboundedSender<Message>>,
 
-    pub message_sender: Option<UnboundedSender<Message>>, // pub callbacks: todo!(),
+    pub message_router: RpcRouter,
+
+    pub callback_router: CallbackRouter,
 }
 
 impl Default for Node {
@@ -38,8 +38,9 @@ impl Default for Node {
             id: RwLock::new(None),
             node_ids: RwLock::new(None),
             next_message_id: AtomicIsize::new(1),
-            message_router: MessageRouter::new(),
             message_sender: None,
+            message_router: RpcRouter::new(),
+            callback_router: CallbackRouter::new(),
         };
         node.handle("init", Node::init_handler);
         node
@@ -162,7 +163,7 @@ impl Node {
 
     pub fn reply<S>(&self, message: Message, reply: S)
     where
-        S: Serialize,
+        S: serde::Serialize,
     {
         let Some(src) = self.get_id() else {
             panic!("self.id value not yet initialized in call to reply")
