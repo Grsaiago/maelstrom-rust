@@ -1,3 +1,3 @@
 use crate::{Message, Node};
 
-pub type HandlerFunc = dyn Fn(Message, &Node) + Send + Sync;
+pub type HandlerFunc<R, W> = dyn Fn(Message, &Node<R, W>) + Send + Sync;

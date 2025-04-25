@@ -1,3 +1,6 @@
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{Stdin, Stdout};
+
 use crate::routers::common::HandlerFunc;
 use crate::Message;
 use crate::Node;
@@ -6,26 +9,30 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-type RpcMap = HashMap<String, Arc<HandlerFunc>>;
+type RpcMap<R, W> = HashMap<String, Arc<HandlerFunc<R, W>>>;
 
-pub struct RpcRouter {
-    pub router: Arc<RwLock<Option<RpcMap>>>,
+pub struct RpcRouter<R, W> {
+    pub router: Arc<RwLock<Option<RpcMap<R, W>>>>,
 }
 
-impl Default for RpcRouter {
+impl Default for RpcRouter<Stdin, Stdout> {
     fn default() -> Self {
         RpcRouter::new()
     }
 }
 
-impl RpcRouter {
-    pub fn new() -> RpcRouter {
+impl<R, W> RpcRouter<R, W>
+where
+    R: AsyncRead + Send + Sync + 'static,
+    W: AsyncWrite + Send + Sync + 'static,
+{
+    pub fn new() -> RpcRouter<R, W> {
         RpcRouter {
             router: Arc::new(RwLock::new(None)),
         }
     }
 
-    pub fn with_capacity(size: usize) -> RpcRouter {
+    pub fn with_capacity(size: usize) -> RpcRouter<R, W> {
         RpcRouter {
             router: Arc::new(RwLock::new(Some(RpcMap::with_capacity(size)))),
         }
@@ -33,10 +40,10 @@ impl RpcRouter {
 
     pub fn route<F>(&mut self, rpc_type: &str, handler: F)
     where
-        F: Fn(Message, &Node) + Send + Sync + 'static,
+        F: Fn(Message, &Node<R, W>) + Send + Sync + 'static,
     {
         // Insert the boxed handler into the router map
-        let arced_handler: Arc<HandlerFunc> = Arc::new(handler);
+        let arced_handler: Arc<HandlerFunc<R, W>> = Arc::new(handler);
         let _ = self
             .router
             .write()
@@ -45,7 +52,7 @@ impl RpcRouter {
             .insert(rpc_type.to_string(), arced_handler);
     }
 
-    pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc>> {
+    pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc<R, W>>> {
         Some(self.router.read().ok()?.as_ref()?.get(key)?.clone())
     }
 }
@@ -63,7 +70,7 @@ mod tests {
 
     #[test]
     fn can_set_then_get() {
-        let mut router = RpcRouter::new();
+        let mut router = RpcRouter::default();
 
         router.route("test", |_, _| {});
         assert!(router.get("test").is_some())
@@ -91,7 +98,7 @@ mod tests {
 
         assert!(router.get(&msg.body.ty).is_some());
         let callback = router.get(&msg.body.ty).unwrap();
-        callback(msg, &Node::new());
+        callback(msg, &Node::default());
         let received_message = rx.recv().expect("Error on receiving message");
         assert_eq!(
             received_message
@@ -105,7 +112,7 @@ mod tests {
 
     #[test]
     fn cannot_get_unexisting_key() {
-        let router = RpcRouter::new();
+        let router = RpcRouter::default();
 
         assert!(router.get("aaaa").is_none())
     }

@@ -7,15 +7,16 @@ use std::{
     sync::atomic::AtomicIsize,
     sync::{Arc, RwLock},
 };
+use tokio::io::{AsyncRead, AsyncWrite, Stdin, Stdout};
 use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
-use tracing::{info, info_span, Instrument, Level};
+use tracing::{Instrument, Level, info, info_span};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
-pub struct Node {
+pub struct Node<R, W> {
     /// Your node's id. this will be initialized whenever your Node gets an Init message
     pub id: RwLock<Option<String>>,
 
@@ -27,13 +28,23 @@ pub struct Node {
 
     pub message_sender: Option<UnboundedSender<Message>>,
 
-    pub message_router: RpcRouter,
+    pub message_router: RpcRouter<R, W>,
 
-    pub callback_router: CallbackRouter,
+    pub callback_router: CallbackRouter<R, W>,
+
+    pub reader: R,
+
+    pub writer: W,
 }
 
-impl Default for Node {
+impl Default for Node<Stdin, Stdout> {
     fn default() -> Self {
+        Node::<Stdin, Stdout>::new()
+    }
+}
+
+impl Node<Stdin, Stdout> {
+    fn new() -> Node<Stdin, Stdout> {
         let mut node = Node {
             id: RwLock::new(None),
             node_ids: RwLock::new(None),
@@ -41,18 +52,33 @@ impl Default for Node {
             message_sender: None,
             message_router: RpcRouter::new(),
             callback_router: CallbackRouter::new(),
+            reader: io::stdin(),
+            writer: io::stdout(),
         };
         node.handle("init", Node::init_handler);
         node
     }
 }
 
-impl Node {
-    pub fn new() -> Node {
-        Node::default()
+impl<R, W> Node<R, W>
+where
+    R: AsyncRead + Send + Sync + 'static,
+    W: AsyncWrite + Send + Sync + 'static,
+{
+    pub fn new_with_reader_writer(reader: R, writer: W) -> Node<R, W> {
+        Node {
+            id: RwLock::new(None),
+            node_ids: RwLock::new(None),
+            next_message_id: AtomicIsize::new(1),
+            message_sender: None,
+            message_router: RpcRouter::new(),
+            callback_router: CallbackRouter::new(),
+            reader,
+            writer,
+        }
     }
 
-    pub fn with_log(self) -> Node {
+    pub fn with_log(self) -> Node<R, W> {
         tracing_subscriber::fmt()
             .compact()
             .with_max_level(Level::INFO)
@@ -88,7 +114,7 @@ impl Node {
         *lock = new_ids;
     }
 
-    fn init_handler(message: Message, node: &Node) {
+    fn init_handler(message: Message, node: &Node<R, W>) {
         let body = match serde_json::from_value::<InitRequest>(message.body.payload.clone()) {
             Ok(body) => body,
             Err(err) => panic!("{err:?}"),
@@ -107,7 +133,7 @@ impl Node {
     // You'd call it as node.handle::<EchoPayload>(handler);
     pub fn handle<F>(&mut self, rpc_type: &str, handler: F)
     where
-        F: Fn(Message, &Node) + Send + Sync + 'static,
+        F: Fn(Message, &Node<R, W>) + Send + Sync + 'static,
     {
         self.message_router.route(rpc_type, handler);
     }
@@ -128,7 +154,7 @@ impl Node {
         }
     }
 
-    pub async fn serve(node: Node, mut receiver: UnboundedReceiver<Message>) {
+    pub async fn serve(node: Node<R, W>, mut receiver: UnboundedReceiver<Message>) {
         let node = Arc::new(node);
         while let Some(message) = receiver.recv().await {
             let shared_node = node.clone();
@@ -153,7 +179,7 @@ impl Node {
         self.message_sender = Some(message_sender.clone());
 
         let listen_handle = tokio::task::spawn(async move {
-            Node::listen(message_sender.clone()).await;
+            Node::<R, W>::listen(message_sender.clone()).await;
         });
         let serve_handle = tokio::task::spawn(async move {
             Node::serve(self, message_receiver).await;

@@ -5,7 +5,7 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let mut node: Node = Node::new().with_log();
+    let mut node = Node::default().with_log();
 
     node.handle("echo", |message, node| {
         let body = message
