@@ -1,10 +1,10 @@
-use crate::{routers::common::HandlerFunc, Message, Node};
+use crate::routers::types::HandlerFunc;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
 
-type CallbackMap = HashMap<isize, Arc<HandlerFunc>>;
+type CallbackMap = HashMap<isize, Arc<dyn HandlerFunc>>;
 
 pub struct CallbackRouter {
     pub router: Arc<RwLock<Option<CallbackMap>>>,
@@ -31,9 +31,9 @@ impl CallbackRouter {
 
     pub fn register_callback<C>(&self, message_id: isize, callback: C)
     where
-        C: Fn(Message, &Node) + Send + Sync + 'static,
+        C: HandlerFunc,
     {
-        let arced_handler: Arc<HandlerFunc> = Arc::new(callback);
+        let arced_handler: Arc<dyn HandlerFunc> = Arc::new(callback);
         let _ = self
             .router
             .write()
@@ -42,7 +42,7 @@ impl CallbackRouter {
             .insert(message_id, arced_handler);
     }
 
-    pub fn get(&mut self, message_id: isize) -> Option<Arc<HandlerFunc>> {
+    pub fn get(&mut self, message_id: isize) -> Option<Arc<dyn HandlerFunc>> {
         self.router.write().ok()?.as_mut()?.remove(&message_id)
     }
 }

@@ -1,4 +1,4 @@
-use crate::routers::{CallbackRouter, RpcRouter};
+use crate::routers::{CallbackRouter, HandlerFunc, RpcRouter};
 use crate::workloads::init::InitRequest;
 use crate::{Message, MessageBody};
 use serde_json::json;
@@ -11,7 +11,7 @@ use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
-use tracing::{info, info_span, Instrument, Level};
+use tracing::{Instrument, Level, info, info_span};
 
 /// The Node struct is this lib's foundation. It helps you to avoid a lot of boilerplate, as well
 /// as it exposes the methods you'll use to build your own maelstrom sollutions
@@ -89,10 +89,8 @@ impl Node {
     }
 
     fn init_handler(message: Message, node: &Node) {
-        let body = match serde_json::from_value::<InitRequest>(message.body.payload.clone()) {
-            Ok(body) => body,
-            Err(err) => panic!("{err:?}"),
-        };
+        let body = serde_json::from_value::<InitRequest>(message.body.payload.clone()).unwrap();
+
         node.set_id(Some(body.node_id));
         node.set_ids(Some(body.node_ids));
         #[cfg(debug_assertions)]
@@ -104,15 +102,15 @@ impl Node {
         node.reply(message, json!({}));
     }
 
-    // You'd call it as node.handle::<EchoPayload>(handler);
-    pub fn handle<F>(&mut self, rpc_type: &str, handler: F)
+    pub fn handle<S, F>(&mut self, rpc_type: S, handler: F)
     where
-        F: Fn(Message, &Node) + Send + Sync + 'static,
+        S: AsRef<str>,
+        F: HandlerFunc,
     {
-        self.message_router.route(rpc_type, handler);
+        self.message_router.route(rpc_type.as_ref(), handler);
     }
 
-    pub async fn listen(sender: UnboundedSender<Message>) {
+    async fn listen(sender: UnboundedSender<Message>) {
         let mut lines_iterator = BufReader::new(io::stdin()).lines();
         while let Some(line) = lines_iterator.next_line().await.unwrap() {
             let message: Message = match serde_json::from_str(&line) {
@@ -128,11 +126,11 @@ impl Node {
         }
     }
 
-    pub async fn serve(node: Node, mut receiver: UnboundedReceiver<Message>) {
-        let node = Arc::new(node);
+    async fn serve(self: Arc<Self>, mut receiver: UnboundedReceiver<Message>) {
         while let Some(message) = receiver.recv().await {
-            let shared_node = node.clone();
-            if let Some(handler) = shared_node.clone().message_router.get(&message.body.ty) {
+            let node = self.clone();
+
+            if let Some(handler) = node.message_router.get(&message.body.ty) {
                 let handler_span = info_span!("message_handler",
                     node = %node.get_id().unwrap_or("nil".to_string()),
                     msg.id = %message.body.msg_id.unwrap_or(0)
@@ -140,7 +138,7 @@ impl Node {
                 tokio::spawn(
                     async move {
                         info!(msg.type = message.body.ty, "calling handler");
-                        handler(message, &shared_node);
+                        handler(message, &node);
                     }
                     .instrument(handler_span),
                 );
@@ -149,51 +147,45 @@ impl Node {
     }
 
     pub async fn run(mut self) {
-        let (message_sender, message_receiver) = mpsc::unbounded_channel::<Message>();
-        self.message_sender = Some(message_sender.clone());
+        let (msg_sender, msg_receiver) = mpsc::unbounded_channel::<Message>();
+        self.message_sender = Some(msg_sender.clone());
 
         let listen_handle = tokio::task::spawn(async move {
-            Node::listen(message_sender.clone()).await;
+            Node::listen(msg_sender.clone()).await;
         });
         let serve_handle = tokio::task::spawn(async move {
-            Node::serve(self, message_receiver).await;
+            Node::serve(Arc::new(self), msg_receiver).await;
         });
         let _ = tokio::join!(listen_handle, serve_handle);
     }
 
-    pub fn reply<S>(&self, message: Message, reply: S)
+    pub fn reply<S>(&self, request: Message, reply: S)
     where
         S: serde::Serialize,
     {
-        let Some(src) = self.get_id() else {
-            panic!("self.id value not yet initialized in call to reply")
-        };
+        let src = self
+            .get_id()
+            .expect("tried to reply when node was not yet initialized");
 
         let message_reply = Message {
             src,
-            dest: message.src.clone(),
+            dest: request.src.clone(),
             body: MessageBody {
-                ty: format!("{}_ok", &message.body.ty),
+                ty: format!("{}_ok", &request.body.ty),
                 msg_id: Some(
                     self.next_message_id
                         .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
                 ),
-                in_reply_to: message.body.msg_id,
+                in_reply_to: request.body.msg_id,
                 payload: serde_json::to_value(reply)
                     .expect("error converting reply into payload in Node::reply"),
             },
         };
 
-        match serde_json::to_string(&message_reply) {
-            Ok(reply_string) => {
-                let mut stdout_lock = std::io::stdout().lock();
-                if let Err(err) = writeln!(stdout_lock, "{}", reply_string) {
-                    panic!("error on writting to stdout in reply method: {err:?}");
-                }
-            }
-            Err(err) => {
-                panic!("error on serializing message_reply: {err:?}");
-            }
-        }
+        let raw_message =
+            serde_json::to_string(&message_reply).expect("error on serializing message_reply");
+        let mut stdout_lock = std::io::stdout().lock();
+        writeln!(stdout_lock, "{}", raw_message)
+            .expect("error on writting to stdout in reply method");
     }
 }

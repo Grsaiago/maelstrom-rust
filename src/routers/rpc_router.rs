@@ -1,12 +1,10 @@
-use crate::routers::common::HandlerFunc;
-use crate::Message;
-use crate::Node;
+use crate::routers::types::HandlerFunc;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
 
-type RpcMap = HashMap<String, Arc<HandlerFunc>>;
+type RpcMap = HashMap<String, Arc<dyn HandlerFunc>>;
 
 pub struct RpcRouter {
     pub router: Arc<RwLock<Option<RpcMap>>>,
@@ -33,10 +31,10 @@ impl RpcRouter {
 
     pub fn route<F>(&mut self, rpc_type: &str, handler: F)
     where
-        F: Fn(Message, &Node) + Send + Sync + 'static,
+        F: HandlerFunc,
     {
         // Insert the boxed handler into the router map
-        let arced_handler: Arc<HandlerFunc> = Arc::new(handler);
+        let arced_handler: Arc<dyn HandlerFunc> = Arc::new(handler);
         let _ = self
             .router
             .write()
@@ -45,7 +43,7 @@ impl RpcRouter {
             .insert(rpc_type.to_string(), arced_handler);
     }
 
-    pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc>> {
+    pub fn get(&self, key: &str) -> Option<Arc<dyn HandlerFunc>> {
         Some(self.router.read().ok()?.as_ref()?.get(key)?.clone())
     }
 }
