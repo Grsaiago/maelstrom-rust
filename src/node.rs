@@ -188,9 +188,9 @@ where
     where
         S: serde::Serialize,
     {
-        let Some(src) = self.get_id() else {
-            panic!("self.id value not yet initialized in call to reply")
-        };
+        let src = self
+            .get_id()
+            .expect("self.id value not yet initialized in call to reply");
 
         let message_reply = Message {
             src,
