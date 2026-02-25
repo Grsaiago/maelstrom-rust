@@ -1,6 +1,7 @@
-use crate::routers::{CallbackRouter, RpcRouter};
+use crate::routers::{CallbackRouter, HandlerFunc, RpcRouter};
 use crate::workloads::init::InitRequest;
 use crate::{Message, MessageBody};
+
 use serde_json::json;
 use std::{
     io::Write,
@@ -115,25 +116,24 @@ where
     }
 
     fn init_handler(message: Message, node: &Node<R, W>) {
-        let body = match serde_json::from_value::<InitRequest>(message.body.payload.clone()) {
-            Ok(body) => body,
-            Err(err) => panic!("{err:?}"),
-        };
+        let body = serde_json::from_value::<InitRequest>(message.body.payload.clone()).unwrap();
+
         node.set_id(Some(body.node_id));
         node.set_ids(Some(body.node_ids));
+
         #[cfg(debug_assertions)]
         println!(
             "Node info!\nNodeId: {:?}\nNodeIds: {:?}",
             node.get_id(),
             node.get_ids()
         );
+
         node.reply(message, json!({}));
     }
 
-    // You'd call it as node.handle::<EchoPayload>(handler);
     pub fn handle<F>(&mut self, rpc_type: &str, handler: F)
     where
-        F: Fn(Message, &Node<R, W>) + Send + Sync + 'static,
+        F: HandlerFunc<R, W>,
     {
         self.message_router.route(rpc_type, handler);
     }
@@ -141,10 +141,7 @@ where
     pub async fn listen(sender: UnboundedSender<Message>) {
         let mut lines_iterator = BufReader::new(io::stdin()).lines();
         while let Some(line) = lines_iterator.next_line().await.unwrap() {
-            let message: Message = match serde_json::from_str(&line) {
-                Ok(val) => val,
-                Err(_err) => panic!(), //TODO: RETORNO MELHOR DE ERRO
-            };
+            let message: Message = serde_json::from_str(&line).unwrap();
             #[cfg(debug_assertions)]
             println!(
                 "A mensagem recebida foi: {}",
@@ -210,16 +207,9 @@ where
             },
         };
 
-        match serde_json::to_string(&message_reply) {
-            Ok(reply_string) => {
-                let mut stdout_lock = std::io::stdout().lock();
-                if let Err(err) = writeln!(stdout_lock, "{}", reply_string) {
-                    panic!("error on writting to stdout in reply method: {err:?}");
-                }
-            }
-            Err(err) => {
-                panic!("error on serializing message_reply: {err:?}");
-            }
-        }
+        let raw_message = serde_json::to_string(&message_reply).unwrap();
+        let mut stdout_lock = std::io::stdout().lock();
+        writeln!(stdout_lock, "{}", raw_message)
+            .expect("error on writting to stdout in reply method");
     }
 }

@@ -1,12 +1,12 @@
-use tokio::io::{AsyncRead, AsyncWrite, Stdin, Stdout};
+use crate::routers::types::HandlerFunc;
 
-use crate::{routers::common::HandlerFunc, Message, Node};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
+use tokio::io::{AsyncRead, AsyncWrite, Stdin, Stdout};
 
-type CallbackMap<R, W> = HashMap<isize, Arc<HandlerFunc<R, W>>>;
+type CallbackMap<R, W> = HashMap<isize, Arc<dyn HandlerFunc<R, W>>>;
 
 pub struct CallbackRouter<R, W> {
     pub router: Arc<RwLock<Option<CallbackMap<R, W>>>>,
@@ -37,9 +37,9 @@ where
 
     pub fn register_callback<C>(&self, message_id: isize, callback: C)
     where
-        C: Fn(Message, &Node<R, W>) + Send + Sync + 'static,
+        C: HandlerFunc<R, W>,
     {
-        let arced_handler: Arc<HandlerFunc<R, W>> = Arc::new(callback);
+        let arced_handler: Arc<dyn HandlerFunc<R, W>> = Arc::new(callback);
         let _ = self
             .router
             .write()
@@ -48,7 +48,7 @@ where
             .insert(message_id, arced_handler);
     }
 
-    pub fn get(&mut self, message_id: isize) -> Option<Arc<HandlerFunc<R, W>>> {
+    pub fn get(&mut self, message_id: isize) -> Option<Arc<dyn HandlerFunc<R, W>>> {
         self.router.write().ok()?.as_mut()?.remove(&message_id)
     }
 }

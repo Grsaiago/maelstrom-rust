@@ -1,15 +1,13 @@
-use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::io::{Stdin, Stdout};
+use crate::routers::HandlerFunc;
 
-use crate::routers::common::HandlerFunc;
-use crate::Message;
-use crate::Node;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{Stdin, Stdout};
 
-type RpcMap<R, W> = HashMap<String, Arc<HandlerFunc<R, W>>>;
+type RpcMap<R, W> = HashMap<String, Arc<dyn HandlerFunc<R, W>>>;
 
 pub struct RpcRouter<R, W> {
     pub router: Arc<RwLock<Option<RpcMap<R, W>>>>,
@@ -40,10 +38,10 @@ where
 
     pub fn route<F>(&mut self, rpc_type: &str, handler: F)
     where
-        F: Fn(Message, &Node<R, W>) + Send + Sync + 'static,
+        F: HandlerFunc<R, W>,
     {
         // Insert the boxed handler into the router map
-        let arced_handler: Arc<HandlerFunc<R, W>> = Arc::new(handler);
+        let arced_handler: Arc<dyn HandlerFunc<R, W>> = Arc::new(handler);
         let _ = self
             .router
             .write()
@@ -52,7 +50,7 @@ where
             .insert(rpc_type.to_string(), arced_handler);
     }
 
-    pub fn get(&self, key: &str) -> Option<Arc<HandlerFunc<R, W>>> {
+    pub fn get(&self, key: &str) -> Option<Arc<dyn HandlerFunc<R, W>>> {
         Some(self.router.read().ok()?.as_ref()?.get(key)?.clone())
     }
 }
