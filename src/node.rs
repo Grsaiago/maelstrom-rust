@@ -151,11 +151,10 @@ where
         }
     }
 
-    pub async fn serve(node: Node<R, W>, mut receiver: UnboundedReceiver<Message>) {
-        let node = Arc::new(node);
+    pub async fn serve(self: Arc<Self>, mut receiver: UnboundedReceiver<Message>) {
         while let Some(message) = receiver.recv().await {
-            let shared_node = node.clone();
-            if let Some(handler) = shared_node.clone().message_router.get(&message.body.ty) {
+            let node = self.clone();
+            if let Some(handler) = node.message_router.get(&message.body.ty) {
                 let handler_span = info_span!("message_handler",
                     node = %node.get_id().unwrap_or("nil".to_string()),
                     msg.id = %message.body.msg_id.unwrap_or(0)
@@ -163,7 +162,7 @@ where
                 tokio::spawn(
                     async move {
                         info!(msg.type = message.body.ty, "calling handler");
-                        handler(message, &shared_node);
+                        handler(message, &node);
                     }
                     .instrument(handler_span),
                 );
@@ -174,12 +173,13 @@ where
     pub async fn run(mut self) {
         let (message_sender, message_receiver) = mpsc::unbounded_channel::<Message>();
         self.message_sender = Some(message_sender.clone());
+        let shared_self = Arc::new(self);
 
         let listen_handle = tokio::task::spawn(async move {
             Node::<R, W>::listen(message_sender.clone()).await;
         });
         let serve_handle = tokio::task::spawn(async move {
-            Node::serve(self, message_receiver).await;
+            Node::serve(shared_self, message_receiver).await;
         });
         let _ = tokio::join!(listen_handle, serve_handle);
     }
